@@ -104,7 +104,7 @@ C7905:1234/220
 
     require 'myasteriskconf'
 
-    mac = MyAsteriskConf.new('/home/james/myasteriskconf1.md', debug: false)
+    mac = MyAsteriskConf.new('/home/james/myasteriskconf2.md', debug: false)
     puts mac.to_sip
 
 <pre>
@@ -222,7 +222,7 @@ C7905:1234/220
 
     require 'myasteriskconf'
 
-    mac = MyAsteriskConf.new('/home/james/myasteriskconf1.md', debug: false)
+    mac = MyAsteriskConf.new('/home/james/myasteriskconf3.md', debug: false)
     puts mac.to_sip
 
 <pre>
