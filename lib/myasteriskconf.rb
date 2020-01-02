@@ -68,33 +68,9 @@ tags: asterisk
 
 
       @sip << "register => " + register
-
     
-    reg_label = register[/(?<=@)\w+/]
-provider = "    
-[#{reg_label}]
-disable=all
-type=peer
-context=from-#{reg_label}
-defaultuser=#{userid}
-fromuser=#{userid}
-authuser=#{userid}
-secret=#{reg_secret}
-host=#{sip_host}
-fromdomain=#{sip_host}
-dtmfmode=rfc2833
-insecure=invite,port
-qualify=yes
-canreinvite=no
-nat=force_rport,comedia
-disallow=all
-;allow=ulaw
-allow=alaw
-allow=gsm
-allow=g729    
-"
-
-      @sip << provider
+      reg_label = register[/(?<=@)\w+/]
+      @sip << sip_provider_template(reg_label, userid, reg_secret, sip_host)
       
     end
     
@@ -185,6 +161,32 @@ source: https://www.asteriskguru.com/tutorials/extensions_conf.html
 exten => #{ext},1, Answer()
 exten => #{ext},n,Dial(SIP/#{deviceid},40)
 exten => #{ext},n,Hangup()"
+
+  end
+  
+  def sip_provider_template(reg_label, userid, reg_secret, sip_host)
+    
+"    
+[#{reg_label}]
+disable=all
+type=peer
+context=from-#{reg_label}
+defaultuser=#{userid}
+fromuser=#{userid}
+authuser=#{userid}
+secret=#{reg_secret}
+host=#{sip_host}
+fromdomain=#{sip_host}
+dtmfmode=rfc2833
+insecure=invite,port
+qualify=yes
+canreinvite=no
+nat=force_rport,comedia
+disallow=all
+;allow=ulaw
+allow=alaw
+allow=gsm
+allow=g729"   
 
   end
 
