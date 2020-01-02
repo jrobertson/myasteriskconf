@@ -56,10 +56,10 @@ tags: asterisk
     @sip << "localnet=" + @h[:sip][:localnet]
     @sip << "externaddr = " + @h[:sip][:externaddr]
     
-    registers = @h[:sip][:register]
+    registers = @h.dig(*%i(sip register))
     register = nil
     
-    if registers.any? then
+    if registers and registers.any? then
       
       register = registers.first
       userid, reg_secret, sip_host = register.match(/(\w+):(\w+)@([^\/]+)/)\
@@ -104,7 +104,6 @@ allow=g729
 
       puts 'x: ' + x.inspect if @debug
       x.match(/^([^:]+):([^\/]+)\/([^$]+)/).captures # id, secret, ext
-
     end
     
     phones.each do |id, secret, ext|
@@ -137,32 +136,35 @@ Pattern matching help for variable extension numbers:
 
 source: https://www.asteriskguru.com/tutorials/extensions_conf.html
 =end
-    
-    outbound.each do |key, value|
-
-      r = key[/d\{(\d+)\}/,1]
-
-      dialout = value.sub(/\(EXTEN\)/,'${EXTEN}')      
+    if outbound then
       
-      if r then
-      
-        pattern = '_' + 'X' * r.to_i
-        
-      elsif key[/^\d+$/]
-        
-        pattern = key.to_s
-        
-      else
-        
+      outbound.each do |key, value|
+
+        r = key[/d\{(\d+)\}/,1]
+
         dialout = value.sub(/\(EXTEN\)/,'${EXTEN}')      
-        pattern = '_' + key.to_s        
         
-      end      
-      
-      @extensions << "\nexten => %s,1,Dial(SIP/%s@%s,60,tr)" \
-          % [pattern, dialout, reg_label]
-      @extensions << "exten => %s,n,Playback(invalid)" % pattern
-      @extensions << "exten => %s,n,Hangup" % pattern      
+        if r then
+        
+          pattern = '_' + 'X' * r.to_i
+          
+        elsif key[/^\d+$/]
+          
+          pattern = key.to_s
+          
+        else
+          
+          dialout = value.sub(/\(EXTEN\)/,'${EXTEN}')      
+          pattern = '_' + key.to_s        
+          
+        end      
+        
+        @extensions << "\nexten => %s,1,Dial(SIP/%s@%s,60,tr)" \
+            % [pattern, dialout, reg_label]
+        @extensions << "exten => %s,n,Playback(invalid)" % pattern
+        @extensions << "exten => %s,n,Hangup" % pattern      
+        
+      end
       
     end
     
@@ -206,8 +208,4 @@ allow=gsm"
 
   end
 
-
-
-
 end
-
