@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'myasteriskconf'
-  s.version = '0.1.2'
+  s.version = '0.1.3'
   s.summary = 'Generates basic Asterisk configurations from a high level config in Markdown format.'
   s.authors = ['James Robertson']
   s.files = Dir['lib/myasteriskconf.rb']
@@ -8,6 +8,6 @@ Gem::Specification.new do |s|
   s.signing_key = '../privatekeys/myasteriskconf.pem'
   s.cert_chain  = ['gem-public_cert.pem']
   s.license = 'MIT'
-  s.email = 'james@jamesrobertson.eu'
+  s.email = 'digital.robertson@gmail.com'
   s.homepage = 'https://github.com/jrobertson/myasteriskconf'
 end

@@ -50,11 +50,49 @@ tags: asterisk
 
   private
 
-  def build()
+  def build(default_ctx='my-phones')
 
+    puts 'h: ' + @h.inspect if @debug
     @sip << "[general]"
-    @sip << "localnet=" + @h[:sip][:localnet]
-    @sip << "externaddr = " + @h[:sip][:externaddr]
+    
+    if @h[:sip][:localnet] then
+      
+      localnet = if @h[:sip][:localnet].length < 2 then
+        localnet()
+      else
+        @h[:sip][:localnet]
+      end
+      
+      @sip << "localnet=" + localnet
+      
+    end
+
+    
+    if @h[:sip][:externaddr] then
+      
+      externaddr = if @h[:sip][:externaddr].length < 2 then
+        externaddr()
+      else
+        @h[:sip][:externaddr]
+      end
+      
+      @sip << "externaddr=" + externaddr
+      
+    end
+    
+    
+    if @h[:sip][:context] then
+      
+      localnet = if @h[:sip][:context].length < 2 then
+        'default'
+      else
+        @h[:sip][:context]
+      end
+      
+      @sip << "context=" + context
+      
+    end    
+         
     
     registers = @h.dig(*%i(sip register))
     register = nil
@@ -74,23 +112,51 @@ tags: asterisk
       
     end
     
-    extensions = []
+    extensions = {default_ctx => []}
 
     phones = @h[:phones].map do |x|
 
-      puts 'x: ' + x.inspect if @debug
-      x.match(/^([^:]+):([^\/]+)\/([^$]+)/).captures # id, secret, ext
+      puts 'x: ' + x.inspect if @debug      
+      
+      regex = %r{
+
+        (?<id>[^:]+){0}
+        (?<secret>[^\/]+){0}
+        (?<ext>[^@$]+){0}
+        (?:@(?<context>[^$]+)){0}
+
+      ^\g<id>:\g<secret>(?:\/)?\g<ext>?\g<context>?
+      }x
+
+      r = regex.match(x)      
+      r.named_captures.values
+      
     end
     
-    phones.each do |id, secret, ext|
+    puts 'phones: ' + phones.inspect if @debug
+    
+    phones.each do |id, secret, ext, context|
+
+      ctx = context || default_ctx      
+      @sip << sip_template(id.downcase, secret, ctx)
+
+      puts 'ctx: '  + ctx.inspect if @debug
+      puts 'extensions: ' + extensions.inspect if @debug
       
-      @sip << sip_template(id.downcase, secret)
-      extensions << ext_template(ext, id)
+      extensions[ctx] ||= []
+      extensions[ctx] << ext_template(ext, id)
 
     end
 
-    @extensions << "[my-phones]"
-    @extensions.concat extensions
+    extensions.map do |key, value|
+      
+      context = key
+      entries = value
+      @extensions << "\n[#{context}]"
+      @extensions.concat entries
+      @extensions << "\n"
+      
+    end
     
     a = phones.map {|x| "SIP/" + x[0].downcase }
     @extensions << "\nexten => 1009,1,Dial(%s,40)" % a.join('&')
@@ -130,7 +196,7 @@ source: https://www.asteriskguru.com/tutorials/extensions_conf.html
           
         else
           
-          dialout = value.sub(/\(EXTEN\)/,'${EXTEN}')      
+          dialout = value.sub(/\((EXTEN:?1?)\)/,'${\1}')      
           pattern = '_' + key.to_s        
           
         end      
@@ -164,6 +230,11 @@ exten => #{ext},n,Hangup()"
 
   end
   
+  def externaddr()
+    h = JSON.parse open('http://jsonip.com/').read
+    h['ip']    
+  end
+  
   def sip_provider_template(reg_label, userid, reg_secret, sip_host)
     
 "    
@@ -189,9 +260,14 @@ allow=gsm
 allow=g729"   
 
   end
+  
+  def localnet()
+    r = Socket.ip_address_list.find { |ai| ai.ipv4? && !ai.ipv4_loopback? }
+    r.ip_address.sub(/\d+$/,'0')
+  end
 
 
-  def sip_template(deviceid, secret)
+  def sip_template(deviceid, secret, context='my-phones')
 
 "
 [#{deviceid}]
@@ -200,7 +276,7 @@ secret=#{secret}
 type=friend
 host=dynamic
 qualify=yes
-context=my-phones
+context=#{context}
 insecure=invite,port
 canreinvite=no
 disallow=all ; better for custom-tunning codec selection
